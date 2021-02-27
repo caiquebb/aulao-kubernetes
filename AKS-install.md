@@ -4,7 +4,7 @@
 
 https://docs.microsoft.com/pt-br/cli/azure/install-azure-cli
 
-``` shell
+``` bash
 az login
 ```
 
@@ -12,21 +12,31 @@ az login
 
 https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough
 
+``` bash
 az group create --name myResourceGroup --location eastus
+```
 
+``` bash
 az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1 --enable-addons monitoring --generate-ssh-keys
+```
 
+``` bash
 az aks install-cli
+```
 
+``` bash
 az aks get-credentials --resource-group myResourceGroup --name myAKSCluster
+```
 
+``` bash
 kubectl get nodes
+```
 
 ## Ingress
 
 https://docs.microsoft.com/en-us/azure/aks/ingress-tls
 
-``` shell
+``` bash
 # Create a namespace for your ingress resources
 kubectl create namespace ingress-basic
 
@@ -40,9 +50,13 @@ helm install nginx-ingress ingress-nginx/ingress-nginx \
     --set controller.nodeSelector."beta\.kubernetes\.io/os"=linux \
     --set defaultBackend.nodeSelector."beta\.kubernetes\.io/os"=linux \
     --set controller.admissionWebhooks.patch.nodeSelector."beta\.kubernetes\.io/os"=linux
+
+kubectl get pods -n ingress-basic
 ```
 
-``` shell
+``` bash
+kubectl --namespace ingress-basic get services -o wide -w nginx-ingress-ingress-nginx-controller
+
 # Public IP address of your ingress controller
 IP="MY_EXTERNAL_IP"
 
@@ -57,4 +71,24 @@ az network public-ip update --ids $PUBLICIPID --dns-name $DNSNAME
 
 # Display the FQDN
 az network public-ip show --ids $PUBLICIPID --query "[dnsSettings.fqdn]" --output tsv
+```
+
+``` bash
+# Label the ingress-basic namespace to disable resource validation
+kubectl label namespace ingress-basic cert-manager.io/disable-validation=true
+
+# Add the Jetstack Helm repository
+helm repo add jetstack https://charts.jetstack.io
+
+# Update your local Helm chart repository cache
+helm repo update
+
+# Install the cert-manager Helm chart
+helm install cert-manager jetstack/cert-manager \
+  --namespace ingress-basic \
+  --version v0.16.1 \
+  --set installCRDs=true \
+  --set nodeSelector."kubernetes\.io/os"=linux \
+  --set webhook.nodeSelector."kubernetes\.io/os"=linux \
+  --set cainjector.nodeSelector."kubernetes\.io/os"=linux
 ```
